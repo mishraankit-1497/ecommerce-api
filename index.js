@@ -9,6 +9,8 @@ const productCategory = require("./models");
 const shopData = require("./shop-model");
 
 const cors = require("cors");
+const ProductCategory = require("./models");
+const ShopModel = require("./shop-model");
 // URI connection
 mongoose
   .connect(uri, {
@@ -86,6 +88,141 @@ app.get("/product-categories", async (req, res) => {
     res.status(500).json({ messsage: err.message });
   }
 });
+
+app.post("/product-categories", async (req, res) => {
+  try {
+    const { title, id, imageUrl } = req.body;
+    let productCategory = new ProductCategory({ title, id, imageUrl });
+    productCategory
+      .save()
+      .then((category) => {
+        res.send(category);
+      })
+      .catch((err) => {
+        res.send(err);
+      });
+  } catch (err) {
+    res.status(500).json({ messsage: err.message });
+  }
+});
+
+app.delete("/product-categories/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteCategory = await ProductCategory.deleteOne({ id });
+    res.send(deleteCategory);
+  } catch (error) {
+    res.send(error);
+  }
+});
+
+app.post("/shop", async (req, res) => {
+  try {
+    const categoryProduct = req.body;
+    const categoryExists = await ShopModel.findOne({ id: categoryProduct.id });
+    console.log(categoryExists);
+    if (!categoryExists) {
+      // New product category
+      let products = new ShopModel(categoryProduct);
+      products
+        .save()
+        .then((resp) => {
+          console.log(resp);
+          res.send(resp);
+        })
+        .catch((error) => console.log("Not able to create product", error));
+    } else {
+      // Existing product category
+
+      const { id, items } = req.body; // Destructing incoming data
+      const product = items[0]; // Assuming you are sending one product at a time
+      // $ represent for match
+      // $set for setting the exisiting one in mongo
+      const update = {
+        $set: {
+          "items.$": product, // aggregation
+        },
+      };
+      let newProducts = ShopModel.updateOne(
+        { id: id, "items.id": product.id },
+        update,
+        {
+          upsert: false, // if upsert: true --> add new record
+          // ensuring only items get updated
+          // Instead of changing title or routeName, it ensures it updated only the product item
+          arrayFilters: [
+            {
+              "items.id": product.id,
+            },
+          ],
+        }
+      ).then((resp) => {
+        res.send(resp);
+      });
+      console.log(newProducts);
+    }
+  } catch (error) {
+    res.send(error);
+  }
+});
+
+app.put("/shop", async (req, res) => {
+  try {
+    const categoryProduct = req.body;
+    const categoryExists = await ShopModel.findOne({ id: categoryProduct.id });
+    if (categoryExists) {
+      // Existing product category
+
+      const { id, items } = req.body; // Destructing incoming data
+      const product = items[0]; // Assuming you are sending one product at a time
+      // $ represent for match
+      // $set for setting the exisiting one in mongo
+      const update = {
+        $set: {
+          "items.$": product, // aggregation
+        },
+      };
+      let newProducts = ShopModel.updateOne(
+        { id: id, "items.id": product.id },
+        update,
+        {
+          upsert: false, // if upsert: true --> add new record
+          // ensuring only items get updated
+          // Instead of changing title or routeName, it ensures it updated only the product item
+          arrayFilters: [
+            {
+              "items.id": product.id,
+            },
+          ],
+        }
+      ).then((resp) => {
+        res.send(resp);
+      });
+    }
+  } catch (error) {
+    res.send(error);
+  }
+});
+
+// app.delete("/product-categories/:id", async (req, res) => {
+//   console.log(req.params);
+//   const category = await ProductCategory.deleteOne({ id: req.params.id });
+//   console.log(category);
+//   if (!category) {
+//     return next(
+//       res.status(204).json({
+//         status: "success",
+//         message: "No product category found with that ID",
+//         data: null,
+//       })
+//     );
+//   }
+//   res.status(200).json({
+//     status: "success",
+//     message: "category deleted successfully",
+//     data: null,
+//   });
+// });
 
 app.get("/shop", async (req, res) => {
   try {
