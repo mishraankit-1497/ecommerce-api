@@ -9,6 +9,10 @@ const productCategory = mongoose.Schema({
     type: String,
     required: true,
   },
+  routeName: {
+    type: String,
+    required: true,
+  },
   id: {
     type: Number,
     required: true,

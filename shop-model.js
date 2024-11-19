@@ -5,35 +5,23 @@ const shopSchema = mongoose.Schema({
     type: Number,
     required: true,
   },
-  title: {
+  name: {
     type: String,
     required: true,
   },
-  routeName: {
+  imageUrl: {
     type: String,
     required: true,
   },
-  items: [
-    {
-      id: {
-        type: Number,
-        required: true,
-      },
-      name: {
-        type: String,
-        required: true,
-      },
-      imageUrl: {
-        type: String,
-        required: true,
-      },
-      price: {
-        type: Number,
-        required: true,
-      },
-    },
-  ],
+  price: {
+    type: Number,
+    required: true,
+  },
+  categoryId: {
+    type: Number,
+    required: true,
+  },
 });
 
-const ShopModel = mongoose.model("Shop", shopSchema, "shops");
+const ShopModel = mongoose.model("Shop", shopSchema, "products");
 module.exports = ShopModel;

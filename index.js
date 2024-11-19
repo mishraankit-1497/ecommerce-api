@@ -91,8 +91,8 @@ app.get("/product-categories", async (req, res) => {
 
 app.post("/product-categories", async (req, res) => {
   try {
-    const { title, id, imageUrl } = req.body;
-    let productCategory = new ProductCategory({ title, id, imageUrl });
+    const { title, id, imageUrl, routeName } = req.body;
+    let productCategory = new ProductCategory({ title, id, imageUrl , routeName});
     productCategory
       .save()
       .then((category) => {
@@ -168,12 +168,12 @@ app.post("/shop", async (req, res) => {
 
 app.put("/shop", async (req, res) => {
   try {
-    const categoryProduct = req.body;
-    const categoryExists = await ShopModel.findOne({ id: categoryProduct.id });
+    const { id, items } = req.body; // Destructing incoming data
+
+    const categoryExists = await ShopModel.findOne({ id: id });
     if (categoryExists) {
       // Existing product category
 
-      const { id, items } = req.body; // Destructing incoming data
       const product = items[0]; // Assuming you are sending one product at a time
       // $ represent for match
       // $set for setting the exisiting one in mongo
@@ -182,20 +182,16 @@ app.put("/shop", async (req, res) => {
           "items.$": product, // aggregation
         },
       };
-      let newProducts = ShopModel.updateOne(
-        { id: id, "items.id": product.id },
-        update,
-        {
-          upsert: false, // if upsert: true --> add new record
-          // ensuring only items get updated
-          // Instead of changing title or routeName, it ensures it updated only the product item
-          arrayFilters: [
-            {
-              "items.id": product.id,
-            },
-          ],
-        }
-      ).then((resp) => {
+      ShopModel.updateOne({ id: id, "items.id": product.id }, update, {
+        upsert: false, // if upsert: true --> add new record
+        // ensuring only items get updated
+        // Instead of changing title or routeName, it ensures it updated only the product item
+        arrayFilters: [
+          {
+            "items.id": product.id,
+          },
+        ],
+      }).then((resp) => {
         res.send(resp);
       });
     }
