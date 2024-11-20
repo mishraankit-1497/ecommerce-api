@@ -92,7 +92,12 @@ app.get("/product-categories", async (req, res) => {
 app.post("/product-categories", async (req, res) => {
   try {
     const { title, id, imageUrl, routeName } = req.body;
-    let productCategory = new ProductCategory({ title, id, imageUrl , routeName});
+    let productCategory = new ProductCategory({
+      title,
+      id,
+      imageUrl,
+      routeName,
+    });
     productCategory
       .save()
       .then((category) => {
@@ -118,107 +123,38 @@ app.delete("/product-categories/:id", async (req, res) => {
 
 app.post("/shop", async (req, res) => {
   try {
-    const categoryProduct = req.body;
-    const categoryExists = await ShopModel.findOne({ id: categoryProduct.id });
-    console.log(categoryExists);
-    if (!categoryExists) {
-      // New product category
-      let products = new ShopModel(categoryProduct);
-      products
-        .save()
-        .then((resp) => {
-          console.log(resp);
-          res.send(resp);
-        })
-        .catch((error) => console.log("Not able to create product", error));
-    } else {
-      // Existing product category
-
-      const { id, items } = req.body; // Destructing incoming data
-      const product = items[0]; // Assuming you are sending one product at a time
-      // $ represent for match
-      // $set for setting the exisiting one in mongo
-      const update = {
-        $set: {
-          "items.$": product, // aggregation
-        },
-      };
-      let newProducts = ShopModel.updateOne(
-        { id: id, "items.id": product.id },
-        update,
-        {
-          upsert: false, // if upsert: true --> add new record
-          // ensuring only items get updated
-          // Instead of changing title or routeName, it ensures it updated only the product item
-          arrayFilters: [
-            {
-              "items.id": product.id,
-            },
-          ],
-        }
-      ).then((resp) => {
-        res.send(resp);
+    const { name, id, imageUrl, price, categoryId } = req.body;
+    let products = new ShopModel({ name, id, imageUrl, price, categoryId });
+    products
+      .save()
+      .then((product) => {
+        res.send(product);
+      })
+      .catch((err) => {
+        res.send(err);
       });
-      console.log(newProducts);
-    }
-  } catch (error) {
-    res.send(error);
+  } catch (err) {
+    res.status(500).json({ messsage: err.message });
   }
 });
 
 app.put("/shop", async (req, res) => {
   try {
-    const { id, items } = req.body; // Destructing incoming data
+    const { categoryId } = req.body;
+    await ShopModel.findOneAndUpdate({ categoryId }, req.body);
+    res.status(200).send({ message: "Product updated successfully" });
+  } catch (error) {}
+});
 
-    const categoryExists = await ShopModel.findOne({ id: id });
-    if (categoryExists) {
-      // Existing product category
-
-      const product = items[0]; // Assuming you are sending one product at a time
-      // $ represent for match
-      // $set for setting the exisiting one in mongo
-      const update = {
-        $set: {
-          "items.$": product, // aggregation
-        },
-      };
-      ShopModel.updateOne({ id: id, "items.id": product.id }, update, {
-        upsert: false, // if upsert: true --> add new record
-        // ensuring only items get updated
-        // Instead of changing title or routeName, it ensures it updated only the product item
-        arrayFilters: [
-          {
-            "items.id": product.id,
-          },
-        ],
-      }).then((resp) => {
-        res.send(resp);
-      });
-    }
+app.delete("/shop/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleteProduct = await ShopModel.deleteOne({ id });
+    res.send(deleteProduct);
   } catch (error) {
     res.send(error);
   }
 });
-
-// app.delete("/product-categories/:id", async (req, res) => {
-//   console.log(req.params);
-//   const category = await ProductCategory.deleteOne({ id: req.params.id });
-//   console.log(category);
-//   if (!category) {
-//     return next(
-//       res.status(204).json({
-//         status: "success",
-//         message: "No product category found with that ID",
-//         data: null,
-//       })
-//     );
-//   }
-//   res.status(200).json({
-//     status: "success",
-//     message: "category deleted successfully",
-//     data: null,
-//   });
-// });
 
 app.get("/shop", async (req, res) => {
   try {
