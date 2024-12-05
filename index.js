@@ -5,9 +5,7 @@ require('dotenv').config();
 const SignUpModel = require("./signup-model");
 const uri = process.env.MONGO_URI;
 const dbName = process.env.DB_NAME;
-// const uri =
-//   "mongodb+srv://mailankitmishra99:Ankit1599M@mycluster.zxht5.mongodb.net/";
-// const dbName = "ecommerce";
+
 const productCategory = require("./models");
 const shopData = require("./shop-model");
 
