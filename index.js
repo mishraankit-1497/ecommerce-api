@@ -1,16 +1,20 @@
 const mongoose = require("mongoose");
 const express = require("express");
 const bodyParser = require("body-parser");
+require('dotenv').config();
 const SignUpModel = require("./signup-model");
-const uri =
-  "mongodb+srv://mailankitmishra99:admin@mycluster.zxht5.mongodb.net/";
-const dbName = "ecommerce";
+const uri = process.env.MONGO_URI;
+const dbName = process.env.DB_NAME;
+// const uri =
+//   "mongodb+srv://mailankitmishra99:Ankit1599M@mycluster.zxht5.mongodb.net/";
+// const dbName = "ecommerce";
 const productCategory = require("./models");
 const shopData = require("./shop-model");
 
 const cors = require("cors");
 const ProductCategory = require("./models");
 const ShopModel = require("./shop-model");
+const Orders = require("./order-model");
 // URI connection
 mongoose
   .connect(uri, {
@@ -140,8 +144,12 @@ app.post("/shop", async (req, res) => {
 
 app.put("/shop", async (req, res) => {
   try {
-    const { categoryId } = req.body;
-    await ShopModel.findOneAndUpdate({ categoryId }, req.body);
+    const { id, categoryId, name, imageUrl, price } = req.body;
+    await ShopModel.findOneAndUpdate(
+      { id: id },
+      { id, categoryId, name, imageUrl, price },
+      { new: true }
+    );
     res.status(200).send({ message: "Product updated successfully" });
   } catch (error) {}
 });
@@ -165,11 +173,111 @@ app.get("/shop", async (req, res) => {
   }
 });
 
+app.post("/order/create", async (req, res) => {
+  const {
+    userId,
+    transactionId,
+    status,
+    transactionAmount,
+    currencyCode,
+    payerName,
+    orderedItems,
+    payerEmail,
+    payerId, 
+  } = req.body;
+
+  try {
+    const user = await SignUpModel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    for (let i = 0; i < orderedItems.length; i++) {
+      const { productId, price, quantity } = orderedItems[i];
+
+      const product = await ShopModel.findById(productId);
+      if (!product) {
+        return res
+          .status(404)
+          .json({ message: `Product with ID ${productId} not found` });
+      }
+
+      if (price != product.price) {
+        return res.status(400).json({
+          message: `Price for product ${product.name} does not match`,
+        });
+      }
+
+      if (quantity <= 0) {
+        return res
+          .status(400)
+          .json({ message: `Invalid quantity for product ${product.name}` });
+      }
+    }
+
+    const newOrder = new Orders({
+      transactionId,
+      status,
+      transactionAmount,
+      currencyCode,
+      payerName,
+      userId,
+      orderedItems,
+      payerEmail,
+      payerId,
+    });
+
+    const order = await newOrder.save();
+
+    return res.status(201).json({
+      status: "success",
+      message: "Order created successfully",
+      order,
+    });
+  } catch (error) {
+    console.error("Error creating order:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+app.get("/order/:userId", async (req, res) => {
+  const { userId } = req.params; // Get userId from the request URL parameter
+
+  try {
+    // Fetch all orders for the user from the Order model
+    const orders = await Orders.find({ userId }).populate(
+      "orderedItems.productId"
+    ); // Populate product details for each orderedItem
+
+    // Return the orders as a response
+    return res.status(200).json({
+      message: "Orders fetched successfully",
+      orders,
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.get("/orders", async (req, res) => {
+
+  try {
+    // Fetch all orders for the user from the Order model
+    const orders = await Orders.find();
+    // Return the orders as a response
+    return res.status(200).json({
+      message: "Orders fetched successfully",
+      orders,
+    });
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+});
+
 // NodeJS process to get exit
 process.on("SIGINT", async () => {
   await mongoose.connection.close();
   process.exit(0);
 });
 
-// body
-// qs
